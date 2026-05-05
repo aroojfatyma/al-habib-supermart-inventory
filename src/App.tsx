@@ -3,8 +3,11 @@ import { AppLockScreen } from './components/AppLockScreen'
 import {
   APP_PASSWORD_CHANGED,
   isAppPasswordEnabled,
+  SESSION_ROLE,
   SESSION_UNLOCKED,
+  type AppUserRole,
 } from './lib/appPassword'
+import { startAutoSyncScheduler, stopAutoSyncScheduler } from './lib/sync'
 import { DashboardView } from './views/DashboardView'
 import { POSView } from './views/POSView'
 import { SalesHistoryView } from './views/SalesHistoryView'
@@ -13,13 +16,19 @@ import { ReceiptSettingsView } from './views/ReceiptSettingsView'
 import './App.css'
 
 type Tab = 'dashboard' | 'pos' | 'sales' | 'inventory' | 'receipt'
+type VisibleTab = { id: Tab; label: string }
 
-const tabs: { id: Tab; label: string }[] = [
+const ADMIN_TABS: VisibleTab[] = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'pos', label: 'Point of sale' },
   { id: 'sales', label: 'Sales & receipts' },
   { id: 'inventory', label: 'Inventory' },
-  { id: 'receipt', label: 'Receipt printout' },
+  { id: 'receipt', label: 'Printed receipt' },
+]
+const STAFF_TABS: VisibleTab[] = [
+  { id: 'pos', label: 'Point of sale' },
+  { id: 'sales', label: 'Sales & receipts' },
+  { id: 'inventory', label: 'Inventory' },
 ]
 
 type Gate = 'loading' | 'locked' | 'open'
@@ -28,17 +37,26 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('pos')
   const [gate, setGate] = useState<Gate>('loading')
   const [passwordOn, setPasswordOn] = useState(false)
+  const [role, setRole] = useState<AppUserRole>('admin')
 
   const refreshGate = useCallback(async () => {
     const enabled = await isAppPasswordEnabled()
     setPasswordOn(enabled)
     if (!enabled) {
       setGate('open')
+      setRole('admin')
       sessionStorage.removeItem(SESSION_UNLOCKED)
+      sessionStorage.removeItem(SESSION_ROLE)
       return
     }
     const sessionOk = sessionStorage.getItem(SESSION_UNLOCKED) === '1'
-    setGate(sessionOk ? 'open' : 'locked')
+    const savedRole = sessionStorage.getItem(SESSION_ROLE)
+    if (sessionOk && (savedRole === 'admin' || savedRole === 'staff')) {
+      setRole(savedRole)
+      setGate('open')
+    } else {
+      setGate('locked')
+    }
   }, [])
 
   useEffect(() => {
@@ -56,10 +74,24 @@ export default function App() {
     return () => window.removeEventListener(APP_PASSWORD_CHANGED, onPasswordChange)
   }, [refreshGate])
 
+  useEffect(() => {
+    startAutoSyncScheduler()
+    return () => stopAutoSyncScheduler()
+  }, [])
+
   const lockNow = () => {
     sessionStorage.removeItem(SESSION_UNLOCKED)
+    sessionStorage.removeItem(SESSION_ROLE)
     setGate('locked')
   }
+
+  const visibleTabs = role === 'admin' ? ADMIN_TABS : STAFF_TABS
+
+  useEffect(() => {
+    if (!visibleTabs.some((t) => t.id === tab)) {
+      setTab('pos')
+    }
+  }, [tab, visibleTabs])
 
   if (gate === 'loading') {
     return (
@@ -70,7 +102,10 @@ export default function App() {
   }
 
   if (gate === 'locked') {
-    return <AppLockScreen onUnlocked={() => setGate('open')} />
+    return <AppLockScreen onUnlocked={(nextRole) => {
+      setRole(nextRole)
+      setGate('open')
+    }} />
   }
 
   return (
@@ -95,7 +130,7 @@ export default function App() {
       </header>
 
       <nav className="main-nav" aria-label="Main">
-        {tabs.map((t) => (
+        {visibleTabs.map((t) => (
           <button
             key={t.id}
             type="button"
@@ -117,7 +152,7 @@ export default function App() {
 
       <footer className="footer">
         One shop, one device — data stays locally (IndexedDB). Use <strong>Inventory → Export to Excel</strong> or{' '}
-        <strong>Server sync</strong> for an off-device copy. Receipt wording is under <strong>Receipt printout</strong>.
+        <strong>Printed receipt → Server sync</strong> for an off-device copy.
       </footer>
     </div>
   )

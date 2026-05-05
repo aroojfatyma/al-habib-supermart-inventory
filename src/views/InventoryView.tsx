@@ -12,12 +12,6 @@ import {
   type StockMovement,
 } from '../db'
 import { formatMoney } from '../lib/money'
-import {
-  getSyncStatus,
-  pullFromServer,
-  pushToServer,
-} from '../lib/sync'
-
 export function InventoryView() {
   const [products, setProducts] = useState<Product[]>([])
   const [movementRows, setMovementRows] = useState<StockMovement[]>([])
@@ -32,23 +26,6 @@ export function InventoryView() {
   const [receiveNote, setReceiveNote] = useState('')
   const [editOpen, setEditOpen] = useState(false)
   const scanRef = useRef<HTMLInputElement>(null)
-
-  const [syncLastOk, setSyncLastOk] = useState<string | null>(null)
-  const [syncLastErr, setSyncLastErr] = useState<string | null>(null)
-  const [syncBusy, setSyncBusy] = useState(false)
-
-  const loadSyncUi = useCallback(async () => {
-    const st = await getSyncStatus()
-    setSyncLastOk(st.lastOkAt)
-    setSyncLastErr(st.lastError)
-  }, [])
-
-  useEffect(() => {
-    const id = requestAnimationFrame(() => {
-      void loadSyncUi()
-    })
-    return () => cancelAnimationFrame(id)
-  }, [loadSyncUi])
 
   const refresh = useCallback(async () => {
     const [list, mv] = await Promise.all([
@@ -86,9 +63,9 @@ export function InventoryView() {
   }, [products, movementRows])
 
   const categoriesInUse = useMemo(() => {
-    const s = new Set<string>([...DEFAULT_CATEGORIES])
+    const s = new Set<string>(DEFAULT_CATEGORIES)
     products.forEach((p) => s.add(normalizeProductCategory(p.category)))
-    return [...s].sort((a, b) => a.localeCompare(b))
+    return Array.from(s).sort((a, b) => a.localeCompare(b))
   }, [products])
 
   const filtered = useMemo(() => {
@@ -191,49 +168,6 @@ export function InventoryView() {
     }
   }
 
-  const doPushSync = async () => {
-    if (!confirm('Upload this device’s full database to the server? This overwrites the server copy.')) {
-      return
-    }
-    setSyncBusy(true)
-    try {
-      await pushToServer()
-      await loadSyncUi()
-      setScanMessage('Uploaded to server.')
-    } catch (e) {
-      setScanMessage(e instanceof Error ? e.message : 'Upload failed.')
-      await loadSyncUi()
-    } finally {
-      setSyncBusy(false)
-    }
-  }
-
-  const doPullSync = async () => {
-    if (!confirm('Download from the server and replace ALL data on this device?')) {
-      return
-    }
-    setSyncBusy(true)
-    try {
-      await pullFromServer()
-      await loadSyncUi()
-      setScanMessage('Downloaded from server — local data replaced.')
-      setActiveProduct(null)
-    } catch (e) {
-      setScanMessage(e instanceof Error ? e.message : 'Download failed.')
-      await loadSyncUi()
-    } finally {
-      setSyncBusy(false)
-    }
-  }
-
-  const syncLastOkLabel =
-    syncLastOk && !Number.isNaN(Number(syncLastOk))
-      ? new Date(Number(syncLastOk)).toLocaleString('en-PK', {
-          dateStyle: 'short',
-          timeStyle: 'short',
-        })
-      : null
-
   const doReceive = async () => {
     if (!activeProduct?.id) return
     try {
@@ -305,33 +239,6 @@ export function InventoryView() {
           <strong>replaces everything</strong> on this device — export a copy first if you are unsure.
         </p>
         {scanMessage ? <p className="scan-msg">{scanMessage}</p> : null}
-      </section>
-
-      <section className="card sync-panel">
-        <h2 className="section-title">Server sync</h2>
-        <p className="hint">
-          Sync is preconfigured in this app build. Use these buttons to upload/download data with the configured
-          server.
-        </p>
-        <div className="grid-form sync-form">
-          <div className="form-actions span-2 sync-actions">
-            <button type="button" className="btn secondary" onClick={() => void doPushSync()} disabled={syncBusy}>
-              Upload to server
-            </button>
-            <button type="button" className="btn secondary" onClick={() => void doPullSync()} disabled={syncBusy}>
-              Download from server
-            </button>
-          </div>
-        </div>
-        <p className="hint sync-status-hint">
-          Last sync: {syncLastOkLabel ?? '—'}
-          {syncLastErr ? (
-            <>
-              <br />
-              <span className="sync-err">Last error: {syncLastErr}</span>
-            </>
-          ) : null}
-        </p>
       </section>
 
       {activeProduct ? (

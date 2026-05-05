@@ -468,6 +468,27 @@
   flex-wrap: wrap;
 }
 
+.scan-form .btn,
+.inv-backup-row .btn,
+.sync-panel .btn {
+  min-height: 2.45rem;
+  padding: 0.58rem 1rem;
+  font-weight: 600;
+}
+
+.sync-panel .sync-actions .btn {
+  min-width: 10.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auto-time-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr 0.9fr;
+  gap: 0.5rem;
+}
+
 .sync-status-hint {
   margin-top: 0.65rem;
   margin-bottom: 0;
@@ -505,6 +526,14 @@
 @media (max-width: 640px) {
   .span-2 {
     grid-column: span 1;
+  }
+
+  .sync-panel .sync-actions .btn {
+    width: 100%;
+  }
+
+  .auto-time-controls {
+    grid-template-columns: 1fr;
   }
 }
 

@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { SESSION_UNLOCKED, verifyAppPassword } from '../lib/appPassword'
+import { SESSION_KEY_NAME, SESSION_ROLE, SESSION_UNLOCKED, verifyAppKey, type AppUserRole } from '../lib/appPassword'
 
 type Props = {
-  onUnlocked: () => void
+  onUnlocked: (role: AppUserRole) => void
 }
 
 export function AppLockScreen({ onUnlocked }: Props) {
@@ -20,14 +20,16 @@ export function AppLockScreen({ onUnlocked }: Props) {
     }
     setBusy(true)
     try {
-      const ok = await verifyAppPassword(p)
-      if (!ok) {
+      const result = await verifyAppKey(p)
+      if (!result.ok || !result.role) {
         setError('Wrong password. Try again.')
         setPassword('')
         return
       }
       sessionStorage.setItem(SESSION_UNLOCKED, '1')
-      onUnlocked()
+      sessionStorage.setItem(SESSION_ROLE, result.role)
+      sessionStorage.setItem(SESSION_KEY_NAME, result.keyName ?? '')
+      onUnlocked(result.role)
     } finally {
       setBusy(false)
     }
