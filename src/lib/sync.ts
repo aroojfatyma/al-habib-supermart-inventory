@@ -4,6 +4,8 @@ import { replaceDatabaseTables, type ImportTables } from './backup'
 
 /** Settings keys never sent to the server (re-applied locally after download). */
 const LOCAL_ONLY_KEYS = new Set(['syncApiKey', 'syncUrl', 'syncLastOkAt', 'syncLastError'])
+const DEFAULT_SYNC_URL = 'https://d3kn7k84xjdf1l.cloudfront.net/sync'
+const DEFAULT_SYNC_API_KEY = 'PvP2QZiKnwY7Mx/jwfHdIO80XhlnephYXJmk9I3N7vmS9QOj9AQsae2GiUYQ7uRn'
 
 export type ServerSyncPayload = ImportTables & {
   schemaVersion: 2
@@ -12,7 +14,10 @@ export type ServerSyncPayload = ImportTables & {
 
 export async function getSyncConfig(): Promise<{ url: string; apiKey: string }> {
   const [urlRow, keyRow] = await Promise.all([db.settings.get('syncUrl'), db.settings.get('syncApiKey')])
-  return { url: (urlRow?.value ?? '').trim(), apiKey: keyRow?.value ?? '' }
+  return {
+    url: (urlRow?.value ?? DEFAULT_SYNC_URL).trim(),
+    apiKey: keyRow?.value ?? DEFAULT_SYNC_API_KEY,
+  }
 }
 
 export async function saveSyncConfig(partial: { url?: string; apiKey?: string }): Promise<void> {
