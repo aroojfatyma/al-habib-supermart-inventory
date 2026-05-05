@@ -349,7 +349,7 @@ export function ReceiptSettingsView() {
           This app runs at one counter only. These lines are what customers see on the paper slip — change
           them when your signboard, address, or phone numbers change. Empty fields use the built‑in defaults.
         </p>
-        <form onSubmit={save} className="grid-form">
+        <form onSubmit={save} className="grid-form" noValidate>
           <label className="span-2">
             Name on receipt
             <input
@@ -535,7 +535,7 @@ export function ReceiptSettingsView() {
 
         {!lockEnabled ? (
           <div className="lock-manage">
-            <form onSubmit={enableLock} className="grid-form lock-form-compact">
+            <form onSubmit={enableLock} className="grid-form lock-form-compact" noValidate>
               <label>
                 New
                 <input
@@ -580,7 +580,7 @@ export function ReceiptSettingsView() {
                 autoComplete="current-password"
               />
             </label>
-            <form id="lock-form-update" onSubmit={updateLockPassword} className="grid-form lock-form-compact">
+            <form id="lock-form-update" onSubmit={updateLockPassword} className="grid-form lock-form-compact" noValidate>
               <label>
                 New
                 <input
@@ -603,7 +603,7 @@ export function ReceiptSettingsView() {
                 />
               </label>
             </form>
-            <form id="lock-form-off" onSubmit={turnOffLock} className="lock-form-off" />
+            <form id="lock-form-off" onSubmit={turnOffLock} className="lock-form-off" noValidate />
             <div className="lock-btn-row">
               <button
                 type="submit"
@@ -638,7 +638,7 @@ export function ReceiptSettingsView() {
                   autoComplete="current-password"
                 />
               </label>
-              <form onSubmit={addNewAppKey} className="grid-form lock-form-compact">
+              <form onSubmit={addNewAppKey} className="grid-form lock-form-compact" noValidate>
                 <label>
                   Key name
                   <input

@@ -333,6 +333,32 @@
 
 .toolbar {
   display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  align-items: stretch;
+}
+
+.toolbar-head .hint {
+  margin-bottom: 0;
+}
+
+.inventory-overview-head {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+}
+
+.inventory-overview-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.toolbar-controls {
+  display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
@@ -344,6 +370,12 @@
   align-items: baseline;
   gap: 0.5rem;
   margin-bottom: 0.75rem;
+}
+
+.active-card .active-head h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--navy);
 }
 
 .pill {
@@ -528,6 +560,15 @@
     grid-column: span 1;
   }
 
+  .inventory-overview-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .inventory-overview-actions {
+    justify-content: flex-start;
+  }
+
   .sync-panel .sync-actions .btn {
     width: 100%;
   }
@@ -586,6 +627,7 @@
 
 .main-area {
   min-height: 40vh;
+  overflow-anchor: none;
 }
 
 .view-stack {
@@ -949,6 +991,8 @@
 /** Full history lists: all rows load from IndexedDB; scroll inside the box so the page stays usable. */
 .table-wrap-scroll {
   max-height: min(70vh, 720px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .detail-head {

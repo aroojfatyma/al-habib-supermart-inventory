@@ -31,6 +31,11 @@ const STAFF_TABS: VisibleTab[] = [
   { id: 'inventory', label: 'Inventory' },
 ]
 
+function defaultTabForRole(nextRole: AppUserRole): Tab {
+  const tabs = nextRole === 'admin' ? ADMIN_TABS : STAFF_TABS
+  return tabs.some((t) => t.id === 'dashboard') ? 'dashboard' : 'pos'
+}
+
 type Gate = 'loading' | 'locked' | 'open'
 
 export default function App() {
@@ -45,6 +50,7 @@ export default function App() {
     if (!enabled) {
       setGate('open')
       setRole('admin')
+      setTab(defaultTabForRole('admin'))
       sessionStorage.removeItem(SESSION_UNLOCKED)
       sessionStorage.removeItem(SESSION_ROLE)
       return
@@ -53,6 +59,7 @@ export default function App() {
     const savedRole = sessionStorage.getItem(SESSION_ROLE)
     if (sessionOk && (savedRole === 'admin' || savedRole === 'staff')) {
       setRole(savedRole)
+      setTab(defaultTabForRole(savedRole))
       setGate('open')
     } else {
       setGate('locked')
@@ -89,9 +96,9 @@ export default function App() {
 
   useEffect(() => {
     if (!visibleTabs.some((t) => t.id === tab)) {
-      setTab('pos')
+      setTab(defaultTabForRole(role))
     }
-  }, [tab, visibleTabs])
+  }, [tab, visibleTabs, role])
 
   if (gate === 'loading') {
     return (
@@ -102,10 +109,15 @@ export default function App() {
   }
 
   if (gate === 'locked') {
-    return <AppLockScreen onUnlocked={(nextRole) => {
-      setRole(nextRole)
-      setGate('open')
-    }} />
+    return (
+      <AppLockScreen
+        onUnlocked={(nextRole) => {
+          setRole(nextRole)
+          setTab(defaultTabForRole(nextRole))
+          setGate('open')
+        }}
+      />
+    )
   }
 
   return (

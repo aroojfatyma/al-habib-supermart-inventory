@@ -7,7 +7,6 @@ import {
   findByBarcode,
   logStockAdjustment,
   normalizeProductCategory,
-  receiveStock,
   type Product,
   type StockMovement,
 } from '../db'
@@ -15,15 +14,11 @@ import { formatMoney } from '../lib/money'
 export function InventoryView() {
   const [products, setProducts] = useState<Product[]>([])
   const [movementRows, setMovementRows] = useState<StockMovement[]>([])
-  const [query, setQuery] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState<string>('')
   const [scanBuffer, setScanBuffer] = useState('')
   const [barcodeForNewProduct, setBarcodeForNewProduct] = useState('')
   const [scanMessage, setScanMessage] = useState<string | null>(null)
   const [activeProduct, setActiveProduct] = useState<Product | null>(null)
   const [addOpen, setAddOpen] = useState(false)
-  const [receiveQty, setReceiveQty] = useState(1)
-  const [receiveNote, setReceiveNote] = useState('')
   const [editOpen, setEditOpen] = useState(false)
   const scanRef = useRef<HTMLInputElement>(null)
 
@@ -69,10 +64,9 @@ export function InventoryView() {
   }, [products])
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
+    const q = scanBuffer.trim().toLowerCase()
     return products.filter((p) => {
       const cat = normalizeProductCategory(p.category)
-      if (categoryFilter && cat !== categoryFilter) return false
       if (!q) return true
       return (
         p.name.toLowerCase().includes(q) ||
@@ -80,18 +74,24 @@ export function InventoryView() {
         cat.toLowerCase().includes(q)
       )
     })
-  }, [products, query, categoryFilter])
+  }, [products, scanBuffer])
 
   const lowStock = useMemo(
     () => products.filter((p) => p.quantity <= p.lowStock && p.lowStock > 0),
     [products],
   )
+  const totalUnitsOnHand = useMemo(() => products.reduce((sum, p) => sum + p.quantity, 0), [products])
 
   const handleScanSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const code = scanBuffer.trim()
     if (!code) return
-    const found = await findByBarcode(code)
+    const foundByBarcode = await findByBarcode(code)
+    const normalized = code.toLowerCase()
+    const foundByExactName = products.find((p) => p.name.trim().toLowerCase() === normalized)
+    const foundByPartialName = products.find((p) => p.name.toLowerCase().includes(normalized))
+    const found = foundByBarcode ?? foundByExactName ?? foundByPartialName
+
     if (found) {
       setActiveProduct(found)
       setAddOpen(false)
@@ -102,7 +102,7 @@ export function InventoryView() {
       setActiveProduct(null)
       setAddOpen(true)
       setEditOpen(false)
-      setScanMessage('Barcode not found — add a new product below.')
+      setScanMessage('Barcode/name not found — add a new product below.')
     }
     setScanBuffer('')
     scanRef.current?.focus()
@@ -168,27 +168,54 @@ export function InventoryView() {
     }
   }
 
-  const doReceive = async () => {
-    if (!activeProduct?.id) return
-    try {
-      await receiveStock(activeProduct.id, receiveQty, receiveNote)
-      setReceiveNote('')
-      setReceiveQty(1)
-      setScanMessage(`Received stock for ${activeProduct.name}.`)
-      const updated = await db.products.get(activeProduct.id)
-      if (updated) setActiveProduct(updated)
-    } catch (e) {
-      setScanMessage(e instanceof Error ? e.message : 'Receive failed.')
-    }
-  }
-
   return (
     <div className="view-stack">
+      <section className="card">
+        <div className="inventory-overview-head">
+          <h2 className="section-title">Inventory overview</h2>
+          <div className="inventory-overview-actions">
+            <label className="btn secondary">
+              Import from Excel
+              <input
+                type="file"
+                accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                hidden
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (f) void importExcel(f)
+                  e.target.value = ''
+                }}
+              />
+            </label>
+            <button type="button" className="btn primary" onClick={() => void exportExcel()}>
+              Export to Excel
+            </button>
+          </div>
+        </div>
+        <div className="kpi-row">
+          <div className="kpi">
+            <div className="kpi-label">Products</div>
+            <div className="kpi-value">{products.length}</div>
+          </div>
+          <div className="kpi">
+            <div className="kpi-label">Units on hand</div>
+            <div className="kpi-value">{totalUnitsOnHand}</div>
+          </div>
+          <div className="kpi">
+            <div className="kpi-label">Low stock items</div>
+            <div className="kpi-value">{lowStock.length}</div>
+          </div>
+          <div className="kpi">
+            <div className="kpi-label">Showing</div>
+            <div className="kpi-value">{filtered.length}</div>
+            <div className="kpi-hint">of {products.length} products</div>
+          </div>
+        </div>
+      </section>
+
       <section className="scan-panel card">
-        <h2>Barcode scanner</h2>
-        <p className="hint">
-          Click here first, then scan — most USB scanners act like a keyboard and press Enter.
-        </p>
+        <h2>Scan & quick actions</h2>
+        <p className="hint">Type/scan barcode or name here. Press Enter to open item, or keep typing to filter list.</p>
         <form onSubmit={handleScanSubmit} className="scan-form">
           <input
             ref={scanRef}
@@ -216,35 +243,14 @@ export function InventoryView() {
             Add without scan
           </button>
         </form>
-        <div className="inv-backup-row">
-          <label className="btn secondary">
-            Import from Excel
-            <input
-              type="file"
-              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-              hidden
-              onChange={(e) => {
-                const f = e.target.files?.[0]
-                if (f) void importExcel(f)
-                e.target.value = ''
-              }}
-            />
-          </label>
-          <button type="button" className="btn primary" onClick={() => void exportExcel()}>
-            Export to Excel
-          </button>
-        </div>
-        <p className="hint inv-backup-hint">
-          One workbook with sheets: Products, Sales, Sale lines, Stock movements, Settings. Import{' '}
-          <strong>replaces everything</strong> on this device — export a copy first if you are unsure.
-        </p>
         {scanMessage ? <p className="scan-msg">{scanMessage}</p> : null}
       </section>
 
       {activeProduct ? (
         <section className="card active-card">
+          <h2 className="section-title">Selected product</h2>
           <div className="active-head">
-            <h2>{activeProduct.name}</h2>
+            <h3>{activeProduct.name}</h3>
             <span className="pill">{activeProduct.barcode}</span>
           </div>
           <div className="active-grid">
@@ -306,34 +312,6 @@ export function InventoryView() {
             </button>
           </div>
 
-          <div className="receive-block">
-            <h3 className="subhead">Stock in (purchase / delivery)</h3>
-            <div className="receive-row">
-              <label>
-                Quantity
-                <input
-                  type="number"
-                  min={1}
-                  className="input"
-                  value={receiveQty}
-                  onChange={(e) => setReceiveQty(Number(e.target.value))}
-                />
-              </label>
-              <label className="flex-grow">
-                Note
-                <input
-                  className="input"
-                  value={receiveNote}
-                  onChange={(e) => setReceiveNote(e.target.value)}
-                  placeholder="Supplier, invoice #, etc."
-                />
-              </label>
-              <button type="button" className="btn primary receive-btn" onClick={() => void doReceive()}>
-                Add to stock
-              </button>
-            </div>
-          </div>
-
           {editOpen ? (
             <EditProductForm
               key={activeProduct.id}
@@ -351,7 +329,12 @@ export function InventoryView() {
             />
           ) : null}
         </section>
-      ) : null}
+      ) : (
+        <section className="card active-card">
+          <h2 className="section-title">Selected product</h2>
+          <p className="hint">Select a row in the inventory list to edit quantity or product details.</p>
+        </section>
+      )}
 
       {addOpen ? (
         <AddProductForm
@@ -372,27 +355,6 @@ export function InventoryView() {
           }}
         />
       ) : null}
-
-      <section className="toolbar card">
-        <input
-          className="input flex"
-          placeholder="Search name, barcode, category…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        <select
-          className="input select"
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-        >
-          <option value="">All categories</option>
-          {categoriesInUse.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-      </section>
 
       {lowStock.length > 0 ? (
         <section className="card warn-banner">
@@ -415,6 +377,9 @@ export function InventoryView() {
       ) : null}
 
       <div className="table-wrap card">
+        <p className="hint" style={{ margin: '0.65rem 0.8rem 0.2rem' }}>
+          Click any row to open full controls in Selected product.
+        </p>
         <table className="data-table">
           <thead>
             <tr>
