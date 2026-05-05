@@ -1,0 +1,69 @@
+import { useState } from 'react'
+import { SESSION_UNLOCKED, verifyAppPassword } from '../lib/appPassword'
+
+type Props = {
+  onUnlocked: () => void
+}
+
+export function AppLockScreen({ onUnlocked }: Props) {
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    const p = password.trim()
+    if (!p) {
+      setError('Enter your password.')
+      return
+    }
+    setBusy(true)
+    try {
+      const ok = await verifyAppPassword(p)
+      if (!ok) {
+        setError('Wrong password. Try again.')
+        setPassword('')
+        return
+      }
+      sessionStorage.setItem(SESSION_UNLOCKED, '1')
+      onUnlocked()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="app-lock-screen">
+      <div className="app-lock-card card">
+        <img
+          src="/logo.png"
+          alt=""
+          className="app-lock-logo"
+          width={100}
+          height={40}
+        />
+        <h1 className="app-lock-title">Supermart suite</h1>
+        <p className="hint app-lock-hint">Enter your app password to continue.</p>
+        <form onSubmit={submit} className="app-lock-form">
+          <label>
+            Password
+            <input
+              type="password"
+              className="input"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              autoFocus
+              disabled={busy}
+            />
+          </label>
+          {error ? <p className="app-lock-error">{error}</p> : null}
+          <button type="submit" className="btn primary app-lock-btn" disabled={busy}>
+            {busy ? 'Checking…' : 'Unlock'}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
