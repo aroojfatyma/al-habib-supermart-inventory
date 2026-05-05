@@ -13,16 +13,11 @@ export type ServerSyncPayload = ImportTables & {
 }
 
 export async function getSyncConfig(): Promise<{ url: string; apiKey: string }> {
-  const [urlRow, keyRow] = await Promise.all([db.settings.get('syncUrl'), db.settings.get('syncApiKey')])
-  return {
-    url: (urlRow?.value ?? DEFAULT_SYNC_URL).trim(),
-    apiKey: keyRow?.value ?? DEFAULT_SYNC_API_KEY,
-  }
+  return { url: DEFAULT_SYNC_URL, apiKey: DEFAULT_SYNC_API_KEY }
 }
 
 export async function saveSyncConfig(partial: { url?: string; apiKey?: string }): Promise<void> {
-  if (partial.url != null) await db.settings.put({ key: 'syncUrl', value: partial.url.trim() })
-  if (partial.apiKey != null) await db.settings.put({ key: 'syncApiKey', value: partial.apiKey })
+  void partial
 }
 
 async function buildPayload(): Promise<ServerSyncPayload> {
@@ -132,7 +127,6 @@ export async function pullFromServer(): Promise<void> {
   }
   const data = parseServerPayload(json)
   await replaceDatabaseTables(data)
-  await saveSyncConfig({ url, apiKey })
   await markSyncOk()
 }
 

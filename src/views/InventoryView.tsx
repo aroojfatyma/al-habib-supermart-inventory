@@ -13,11 +13,9 @@ import {
 } from '../db'
 import { formatMoney } from '../lib/money'
 import {
-  getSyncConfig,
   getSyncStatus,
   pullFromServer,
   pushToServer,
-  saveSyncConfig,
 } from '../lib/sync'
 
 export function InventoryView() {
@@ -35,16 +33,12 @@ export function InventoryView() {
   const [editOpen, setEditOpen] = useState(false)
   const scanRef = useRef<HTMLInputElement>(null)
 
-  const [syncUrl, setSyncUrl] = useState('')
-  const [syncApiKey, setSyncApiKey] = useState('')
   const [syncLastOk, setSyncLastOk] = useState<string | null>(null)
   const [syncLastErr, setSyncLastErr] = useState<string | null>(null)
   const [syncBusy, setSyncBusy] = useState(false)
 
   const loadSyncUi = useCallback(async () => {
-    const [{ url, apiKey }, st] = await Promise.all([getSyncConfig(), getSyncStatus()])
-    setSyncUrl(url)
-    setSyncApiKey(apiKey)
+    const st = await getSyncStatus()
     setSyncLastOk(st.lastOkAt)
     setSyncLastErr(st.lastError)
   }, [])
@@ -197,16 +191,6 @@ export function InventoryView() {
     }
   }
 
-  const saveSyncFields = async () => {
-    try {
-      await saveSyncConfig({ url: syncUrl, apiKey: syncApiKey })
-      await loadSyncUi()
-      setScanMessage('Sync server settings saved.')
-    } catch (e) {
-      setScanMessage(e instanceof Error ? e.message : 'Could not save sync settings.')
-    }
-  }
-
   const doPushSync = async () => {
     if (!confirm('Upload this device’s full database to the server? This overwrites the server copy.')) {
       return
@@ -326,37 +310,11 @@ export function InventoryView() {
       <section className="card sync-panel">
         <h2 className="section-title">Server sync</h2>
         <p className="hint">
-          Optional: keep a copy on your own server. Use the included <code className="mono-inline">npm run sync-server</code>{' '}
-          for local testing, or point to any HTTPS endpoint that accepts <strong>GET</strong> / <strong>PUT</strong> the
-          same JSON snapshot (see <code className="mono-inline">server/sync-server.mjs</code>). Send header{' '}
-          <code className="mono-inline">X-Api-Key</code> if you set <code className="mono-inline">SYNC_API_KEY</code>.
+          Sync is preconfigured in this app build. Use these buttons to upload/download data with the configured
+          server.
         </p>
         <div className="grid-form sync-form">
-          <label className="span-2">
-            Sync URL
-            <input
-              className="input"
-              value={syncUrl}
-              onChange={(e) => setSyncUrl(e.target.value)}
-              placeholder="http://127.0.0.1:3847/sync"
-              autoComplete="off"
-            />
-          </label>
-          <label className="span-2">
-            API key (optional on server if unset)
-            <input
-              type="password"
-              className="input"
-              value={syncApiKey}
-              onChange={(e) => setSyncApiKey(e.target.value)}
-              autoComplete="off"
-              placeholder="Same as SYNC_API_KEY on the server"
-            />
-          </label>
           <div className="form-actions span-2 sync-actions">
-            <button type="button" className="btn secondary" onClick={() => void saveSyncFields()}>
-              Save sync settings
-            </button>
             <button type="button" className="btn secondary" onClick={() => void doPushSync()} disabled={syncBusy}>
               Upload to server
             </button>
