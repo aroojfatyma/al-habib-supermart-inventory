@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const STORE = path.join(__dirname, 'sync-store.json')
-const PORT = Number(process.env.SYNC_PORT || 3847)
+const PORT = Number(process.env.PORT || process.env.SYNC_PORT || 3847)
 const API_KEY = process.env.SYNC_API_KEY || ''
 
 const emptyPayload = () =>
