@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
+  APP_PASSWORD_CHANGED,
   addAppKey,
   changeAppKeyPassword,
   disableAppPassword,
@@ -108,6 +109,18 @@ export function ReceiptSettingsView() {
 
   useEffect(() => {
     void refreshLockState()
+  }, [])
+
+  useEffect(() => {
+    const onChanged = () => {
+      void refreshLockState()
+    }
+    window.addEventListener(APP_PASSWORD_CHANGED, onChanged)
+    window.addEventListener('focus', onChanged)
+    return () => {
+      window.removeEventListener(APP_PASSWORD_CHANGED, onChanged)
+      window.removeEventListener('focus', onChanged)
+    }
   }, [])
 
   useEffect(() => {
@@ -403,14 +416,14 @@ export function ReceiptSettingsView() {
           schedule.
         </p>
         <div className="grid-form sync-form">
-          <label className="span-2">
+          <label className="span-2 sync-enable-row">
             <input
+              className="sync-enable-checkbox"
               type="checkbox"
               checked={autoEnabled}
               onChange={(e) => setAutoEnabled(e.target.checked)}
-              style={{ marginRight: 8 }}
             />
-            Enable auto-sync
+            <span>Enable auto-sync</span>
           </label>
 
           <label>

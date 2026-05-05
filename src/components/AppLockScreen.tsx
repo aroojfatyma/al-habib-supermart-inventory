@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { SESSION_KEY_NAME, SESSION_ROLE, SESSION_UNLOCKED, verifyAppKey, type AppUserRole } from '../lib/appPassword'
 
 type Props = {
@@ -9,6 +9,12 @@ export function AppLockScreen({ onUnlocked }: Props) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    // Prevent browser from jumping/scrolling when lock input receives focus.
+    inputRef.current?.focus({ preventScroll: true })
+  }, [])
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -51,12 +57,12 @@ export function AppLockScreen({ onUnlocked }: Props) {
           <label>
             Password
             <input
+              ref={inputRef}
               type="password"
               className="input"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
-              autoFocus
               disabled={busy}
             />
           </label>
