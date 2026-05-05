@@ -17,6 +17,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const STORE = path.join(__dirname, 'sync-store.json')
 const PORT = Number(process.env.PORT || process.env.SYNC_PORT || 3847)
 const API_KEY = process.env.SYNC_API_KEY || ''
+const ORIGIN_SECRET = process.env.SYNC_ORIGIN_SECRET || ''
 const ALLOWED_ORIGINS = (process.env.SYNC_ALLOWED_ORIGINS || '')
   .split(',')
   .map((v) => v.trim())
@@ -61,6 +62,11 @@ function cors(req, res) {
 function auth(req) {
   if (!API_KEY) return true
   return req.headers['x-api-key'] === API_KEY
+}
+
+function originAccessAllowed(req) {
+  if (!ORIGIN_SECRET) return true
+  return req.headers['x-origin-verify'] === ORIGIN_SECRET
 }
 
 function readBody(req) {
@@ -108,6 +114,12 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname !== '/sync') {
     res.writeHead(404, { 'Content-Type': 'text/plain' })
     res.end('Use GET or PUT /sync')
+    return
+  }
+
+  if (!originAccessAllowed(req)) {
+    res.writeHead(403, { 'Content-Type': 'text/plain' })
+    res.end('Forbidden')
     return
   }
 
