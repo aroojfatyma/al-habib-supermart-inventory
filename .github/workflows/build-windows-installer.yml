@@ -22,8 +22,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build desktop installer
-        run: npm run desktop:dist
+      - name: Build desktop installer (no GitHub release publish)
+        run: npm run build && npx electron-builder --win --x64 --publish never
 
       - name: Upload installer artifacts
         uses: actions/upload-artifact@v4
