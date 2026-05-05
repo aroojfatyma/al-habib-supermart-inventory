@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { SESSION_KEY_NAME, SESSION_ROLE, SESSION_UNLOCKED, verifyAppKey, type AppUserRole } from '../lib/appPassword'
+import { LOGO_SRC } from '../lib/publicAssets'
 
 type Props = {
   onUnlocked: (role: AppUserRole) => void
@@ -45,7 +46,7 @@ export function AppLockScreen({ onUnlocked }: Props) {
     <div className="app-lock-screen">
       <div className="app-lock-card card">
         <img
-          src="/logo.png"
+          src={LOGO_SRC}
           alt=""
           className="app-lock-logo"
           width={100}

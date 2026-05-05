@@ -1,4 +1,5 @@
 import type { Sale, SaleLine, StoreInfo } from '../db'
+import { LOGO_SRC } from './publicAssets'
 
 /** Printed slip — matches AL-HABIB manual receipt book layout. */
 export type ReceiptStoreInfo = StoreInfo & {
@@ -24,8 +25,7 @@ function escapeHtml(s: string) {
 
 /** Load brand mark for embedding in the print document (works in Electron `about:blank`). */
 export async function loadReceiptLogoDataUrl(): Promise<string> {
-  const base = import.meta.env.BASE_URL || '/'
-  const path = `${base.endsWith('/') ? base : base + '/'}logo.png`
+  const path = LOGO_SRC
   try {
     const res = await fetch(new URL(path, window.location.href).href)
     if (!res.ok) return ''

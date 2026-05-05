@@ -7,6 +7,7 @@ import {
   SESSION_UNLOCKED,
   type AppUserRole,
 } from './lib/appPassword'
+import { LOGO_SRC } from './lib/publicAssets'
 import { startAutoSyncScheduler, stopAutoSyncScheduler } from './lib/sync'
 import { DashboardView } from './views/DashboardView'
 import { POSView } from './views/POSView'
@@ -125,7 +126,7 @@ export default function App() {
       <header className="header">
         <div className="brand">
           <img
-            src="/logo.png"
+            src={LOGO_SRC}
             alt="AL HABIB Supermart"
             className="logo"
             width={260}

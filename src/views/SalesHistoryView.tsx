@@ -1,14 +1,30 @@
 import { useEffect, useState } from 'react'
 import { liveQuery } from 'dexie'
+import { SaleSummaryDialog } from '../components/SaleSummaryDialog'
 import { db, getSaleWithLines, getStoreInfo, type Sale } from '../db'
 import { formatMoney } from '../lib/money'
 import { buildReceiptHtml, loadReceiptLogoDataUrl, printReceiptHtml } from '../lib/receipt'
+import { endOfDayMs, startOfDayMs } from '../lib/stats'
 
 type SaleDetail = NonNullable<Awaited<ReturnType<typeof getSaleWithLines>>>
+
+function pad2(n: number) {
+  return String(n).padStart(2, '0')
+}
+
+function localYmd(d: Date) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
+}
 
 export function SalesHistoryView() {
   const [sales, setSales] = useState<Sale[]>([])
   const [selected, setSelected] = useState<SaleDetail | null>(null)
+  const [saleSummaryOpen, setSaleSummaryOpen] = useState(false)
+
+  const d = new Date()
+  const todayStr = localYmd(d)
+  const todayFromMs = startOfDayMs(d)
+  const todayToMs = endOfDayMs(d)
 
   useEffect(() => {
     const sub = liveQuery(() => db.sales.orderBy('createdAt').reverse().toArray()).subscribe({
@@ -40,8 +56,21 @@ export function SalesHistoryView() {
 
   return (
     <div className="view-stack">
+      <SaleSummaryDialog
+        open={saleSummaryOpen}
+        onClose={() => setSaleSummaryOpen(false)}
+        fromMs={todayFromMs}
+        toMs={todayToMs}
+        periodFromStr={todayStr}
+        periodToStr={todayStr}
+      />
       <section className="card">
-        <h2 className="section-title">Sales & receipts</h2>
+        <div className="sales-section-head">
+          <h2 className="section-title">Sales & receipts</h2>
+          <button type="button" className="btn secondary" onClick={() => setSaleSummaryOpen(true)}>
+            Sale summary (today)
+          </button>
+        </div>
         <p className="hint">
           All sales stored on this device (newest first). Open a row for lines or reprint. Use{' '}
           <strong>Inventory → Export to Excel</strong> to archive data.

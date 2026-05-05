@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { liveQuery } from 'dexie'
+import { SaleSummaryDialog } from '../components/SaleSummaryDialog'
 import { db, getStoreInfo, type Sale, type SaleLine } from '../db'
 import { buildDashboardReportHtml, printDashboardReport, type DashboardPrintPayload } from '../lib/dashboardReport'
 import { formatMoney } from '../lib/money'
@@ -20,6 +21,7 @@ function todayLocal() {
 export function DashboardView() {
   const [fromStr, setFromStr] = useState(todayLocal)
   const [toStr, setToStr] = useState(todayLocal)
+  const [saleSummaryOpen, setSaleSummaryOpen] = useState(false)
 
   const [sales, setSales] = useState<Sale[]>([])
   const [lines, setLines] = useState<SaleLine[]>([])
@@ -124,6 +126,14 @@ export function DashboardView() {
 
   return (
     <div className="view-stack">
+      <SaleSummaryDialog
+        open={saleSummaryOpen}
+        onClose={() => setSaleSummaryOpen(false)}
+        fromMs={fromMs}
+        toMs={toMs}
+        periodFromStr={fromStr}
+        periodToStr={toStr}
+      />
       <section className="card kpi-row dash-pl-row">
         <div className="kpi">
           <div className="kpi-label">Net collected</div>
@@ -171,9 +181,14 @@ export function DashboardView() {
       <section className="card dash-period">
         <div className="dash-period-head">
           <h2 className="section-title">Report period &amp; print</h2>
-          <button type="button" className="btn primary" onClick={printReport}>
-            Print profit / loss
-          </button>
+          <div className="dash-period-actions">
+            <button type="button" className="btn secondary" onClick={() => setSaleSummaryOpen(true)}>
+              Sale summary
+            </button>
+            <button type="button" className="btn primary" onClick={printReport}>
+              Print profit / loss
+            </button>
+          </div>
         </div>
         <p className="hint dash-print-hint">
           Choose dates for the figures above, then print a summary (profit / loss, units, and counts).
