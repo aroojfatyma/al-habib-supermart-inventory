@@ -17,6 +17,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const STORE = path.join(__dirname, 'sync-store.json')
 const PORT = Number(process.env.PORT || process.env.SYNC_PORT || 3847)
 const API_KEY = process.env.SYNC_API_KEY || ''
+const ALLOWED_ORIGINS = (process.env.SYNC_ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((v) => v.trim())
+  .filter(Boolean)
 
 const emptyPayload = () =>
   JSON.stringify({
@@ -29,10 +33,29 @@ const emptyPayload = () =>
     settings: [],
   })
 
-function cors(res) {
-  res.setHeader('Access-Control-Allow-Origin', '*')
+function applySecurityHeaders(req, res) {
+  if (req.headers['x-forwarded-proto'] === 'https') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+  }
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+}
+
+function cors(req, res) {
+  const origin = req.headers.origin
+
+  if (ALLOWED_ORIGINS.length === 0) {
+    res.setHeader('Access-Control-Allow-Origin', '*')
+  } else if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin || ALLOWED_ORIGINS[0])
+    res.setHeader('Vary', 'Origin')
+  } else {
+    return false
+  }
+
   res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Api-Key')
+  res.setHeader('Access-Control-Max-Age', '600')
+  return true
 }
 
 function auth(req) {
@@ -59,7 +82,12 @@ function readBody(req) {
 }
 
 const server = http.createServer(async (req, res) => {
-  cors(res)
+  applySecurityHeaders(req, res)
+  if (!cors(req, res)) {
+    res.writeHead(403, { 'Content-Type': 'text/plain' })
+    res.end('Origin not allowed')
+    return
+  }
 
   if (req.method === 'OPTIONS') {
     res.writeHead(204)
